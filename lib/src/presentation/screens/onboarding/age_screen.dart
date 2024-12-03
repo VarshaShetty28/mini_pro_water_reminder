@@ -10,22 +10,14 @@ class AgeScreen extends StatelessWidget {
     ValueNotifier<int> selectedAge = ValueNotifier<int>(25); // Default age
 
     return Scaffold(
-      //appBar: AppBar(
-      //  title: const Text('Select Your Age'),
-      //  backgroundColor: Colors.blue,
-      //  centerTitle: true,
-      //  elevation: 2,
-     // ),
       body: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 30), // Space before title
 
-            // Title
             const Text(
               'How old are you?',
-
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -77,7 +69,6 @@ class AgeScreen extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(height: 20), // Space before selected age display
 
             // Display Selected Age Dynamically

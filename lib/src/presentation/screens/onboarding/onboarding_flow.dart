@@ -1,9 +1,11 @@
+// OnboardingFlow.dart
 import 'package:flutter/material.dart';
 import 'package:mini_pro_water_reminder/src/presentation/screens/onboarding/gender_screen.dart';
 import 'package:mini_pro_water_reminder/src/presentation/screens/onboarding/age_screen.dart';
 import 'package:mini_pro_water_reminder/src/presentation/screens/onboarding/weight_screen.dart';
 import 'package:mini_pro_water_reminder/src/presentation/screens/onboarding/wakeup_screen.dart';
 import 'package:mini_pro_water_reminder/src/presentation/screens/onboarding/bedtime_screen.dart';
+import 'package:mini_pro_water_reminder/src/presentation/screens/onboarding/kidney_stone_report.dart';
 import 'package:mini_pro_water_reminder/src/presentation/screens/dashboard/dashboard_screen.dart';
 
 class OnboardingFlow extends StatefulWidget {
@@ -23,12 +25,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     "Enter Weight",
     "Wakeup Time",
     "Bedtime",
+    "Upload Kidney Stone Report",
   ];
 
   final String _motivation = "Stay hydrated, stay healthy!";
 
   void _nextStep() {
-    if (_currentStep < 4) {
+    if (_currentStep < 5) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -53,17 +56,20 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     }
   }
 
+  void _handleReportSubmission(String reportPath) {
+    Navigator.pushReplacementNamed(context, '/dashboard');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          // Top Section with Back Arrow, Title, and Motivation
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 50, left: 16, right: 16, bottom: 30),
             decoration: const BoxDecoration(
-              color: Colors.blue, // Blue background
+              color: Colors.blue,
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(40),
                 bottomRight: Radius.circular(40),
@@ -74,15 +80,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               children: [
                 Row(
                   children: [
-                    // Back Arrow Button
                     if (_currentStep > 0)
                       IconButton(
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: _previousStep,
                       ),
                     const SizedBox(width: 10),
-
-                    // Title
                     Expanded(
                       child: Text(
                         _titles[_currentStep],
@@ -94,16 +97,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    // Placeholder to align title centrally
-                    if (_currentStep > 0)
-                      const SizedBox(
-                        width: 48, // Match back arrow button's width
-                      ),
+                    const SizedBox(width: 48),
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Motivational Thought
                 Text(
                   _motivation,
                   style: const TextStyle(
@@ -116,8 +113,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               ],
             ),
           ),
-
-          // Content Area with PageView
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -127,13 +122,17 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 AgeScreen(onNext: (age) => _nextStep()),
                 WeightScreen(onNext: (weight) => _nextStep()),
                 WakeupScreen(onNext: (wakeupTime) => _nextStep()),
-                BedtimeScreen(onNext: (bedtime) {
-                  Navigator.of(context).pushReplacement(
+                BedtimeScreen(onNext: (bedtime) => _nextStep()),
+                KidneyStoneReportScreen(
+                  onSkip: () => Navigator.pushReplacement(
+                    context,
                     MaterialPageRoute(
                       builder: (context) => const DashboardScreen(),
                     ),
-                  );
-                }),
+                  ),
+                  onBack: _previousStep,
+                  onSubmit: _handleReportSubmission,
+                ),
               ],
             ),
           ),
