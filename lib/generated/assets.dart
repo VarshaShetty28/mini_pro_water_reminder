@@ -11,19 +11,25 @@ class Assets {
   static const String imagesLogo = 'assets/images/logo.png';
   static const String libFirebaseOptions = 'lib/firebase_options.dart';
   static const String libMain = 'lib/main.dart';
-  static const String modelsUserModel = 'lib/src/data/models/user_model.dart';
+  static const String modelsNotificationModel = 'lib/src/data/models/notification_model.dart';
+  static const String modelsUserProfile = 'lib/src/data/models/user_profile.dart';
+  static const String notificationsNotificationScreen = 'lib/src/presentation/screens/notifications/notification_screen.dart';
   static const String onboardingAgeScreen = 'lib/src/presentation/screens/onboarding/age_screen.dart';
   static const String onboardingBedtimeScreen = 'lib/src/presentation/screens/onboarding/bedtime_screen.dart';
   static const String onboardingGenderScreen = 'lib/src/presentation/screens/onboarding/gender_screen.dart';
+  static const String onboardingKidneyStoneReport = 'lib/src/presentation/screens/onboarding/kidney_stone_report.dart';
   static const String onboardingOnboardingFlow = 'lib/src/presentation/screens/onboarding/onboarding_flow.dart';
   static const String onboardingWakeupScreen = 'lib/src/presentation/screens/onboarding/wakeup_screen.dart';
   static const String onboardingWeightScreen = 'lib/src/presentation/screens/onboarding/weight_screen.dart';
+  static const String servicesFirestoreService = 'lib/src/services/firestore_service.dart';
+  static const String servicesNotificationService = 'lib/src/services/notification_service.dart';
   static const String splashSplashScreen = 'lib/src/presentation/screens/splash/splash_screen.dart';
   static const String srcApp = 'lib/src/app.dart';
   static const String stateManagementUserState = 'lib/src/presentation/state_management/user_state.dart';
   static const String themeAppTheme = 'lib/src/core/theme/app_theme.dart';
-  static const String utilsAppUtils = 'lib/src/core/utils/app_utils.dart';
+  static const String utilsWaterIntakeCalculator = 'lib/src/core/utils/water_intake_calculator.dart';
   static const String widgetsCustomButton = 'lib/src/presentation/widgets/custom_button.dart';
+  static const String widgetsCustomSwitch = 'lib/src/presentation/widgets/custom_switch.dart';
   static const String widgetsCustomTextField = 'lib/src/presentation/widgets/custom_text_field.dart';
 
 }

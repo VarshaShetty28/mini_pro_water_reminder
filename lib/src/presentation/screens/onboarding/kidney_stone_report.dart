@@ -1,6 +1,7 @@
+//kidney_stone_report.dart
 import 'package:flutter/material.dart';
 
-class KidneyStoneReportScreen extends StatelessWidget {
+class KidneyStoneReportScreen extends StatefulWidget {
   final VoidCallback onSkip;
   final VoidCallback onBack;
   final Function(String reportPath) onSubmit;
@@ -13,23 +14,96 @@ class KidneyStoneReportScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    String? _selectedFile;
+  _KidneyStoneReportScreenState createState() => _KidneyStoneReportScreenState();
+}
 
-    void _uploadFile() async {
-      // Mock file upload logic
-      await Future.delayed(const Duration(seconds: 1));
-      _selectedFile = 'path_to_mock_file';
+class _KidneyStoneReportScreenState extends State<KidneyStoneReportScreen> {
+  String? _selectedFilePath;
 
-      if (_selectedFile != null) {
-        onSubmit(_selectedFile!);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No file selected. Please try again.")),
+  void _showFileUploadDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Upload Report'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Choose how you want to upload your report:'),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Simulate camera/gallery selection
+                  Navigator.of(context).pop();
+                  _showSelectionConfirmation('Camera/Gallery');
+                },
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Camera/Gallery'),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Simulate file selection
+                  Navigator.of(context).pop();
+                  _showSelectionConfirmation('Files');
+                },
+                icon: const Icon(Icons.file_upload),
+                label: const Text('Files'),
+              ),
+            ],
+          ),
         );
-      }
-    }
+      },
+    );
+  }
 
+  void _showSelectionConfirmation(String source) {
+    setState(() {
+      // Simulate file path selection
+      _selectedFilePath = 'mock_report_path_from_$source.pdf';
+    });
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Upload'),
+          content: Text('File selected from $source:\n$_selectedFilePath'),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                setState(() {
+                  _selectedFilePath = null;
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              child: const Text('Upload'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                if (_selectedFilePath != null) {
+                  // Call onSubmit with the selected file path
+                  widget.onSubmit(_selectedFilePath!);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Report uploaded from $source'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -80,7 +154,7 @@ class KidneyStoneReportScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
-                      onPressed: _uploadFile,
+                      onPressed: _showFileUploadDialog,
                       icon: const Icon(Icons.upload_file),
                       label: const Text('Upload Report'),
                       style: ElevatedButton.styleFrom(
@@ -94,7 +168,7 @@ class KidneyStoneReportScreen extends StatelessWidget {
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
-                        minimumSize: const Size(200, 50), // Increase button size
+                        minimumSize: const Size(200, 50),
                       ),
                     ),
                   ],
@@ -102,9 +176,9 @@ class KidneyStoneReportScreen extends StatelessWidget {
               ),
               const SizedBox(height: 30),
               TextButton(
-                onPressed: onSkip,
+                onPressed: widget.onSkip,
                 child: const Text(
-                  'No,Skip',
+                  'No, Skip',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.blueAccent,

@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:mini_pro_water_reminder/src/presentation/screens/notifications/notification_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -8,86 +11,197 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // Sample data - in real app, this would come from backend
-  final double dailyTarget = 1260;
-  double currentIntake = 250;
-  final List<WaterRecord> records = [
-    WaterRecord(time: "10:44 pm", amount: 125),
-    WaterRecord(time: "10:43 pm", amount: 125),
-  ];
-  String nextTime = "06:00 am";
+  double currentIntake = 0;
+  final List<WaterRecord> records = [];
 
-  void addWaterIntake() {
-    setState(() {
-      if (currentIntake < dailyTarget) {
-        currentIntake += 125;
-        records.insert(0, WaterRecord(
-          time: "${DateTime.now().hour}:${DateTime.now().minute}",
-          amount: 125,
-        ));
+  // User data variables
+  double weight = 0.0;
+  int age = 0;
+  String gender = "";
+  double dailyTarget = 0.0;
+  bool isLoading = true;
+
+  // Current page index for bottom navigation
+  int currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserDataAndCalculateIntake();
+  }
+
+  /// Fetch user data and calculate daily water intake
+  Future<void> fetchUserDataAndCalculateIntake() async {
+    try {
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      // Fetch user document
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+
+      if (userDoc.exists) {
+        setState(() {
+          weight = (userDoc['weight'] as num).toDouble();
+          age = userDoc['age'] as int;
+          gender = userDoc['gender'] as String;
+
+          // Calculate daily water intake
+          dailyTarget = calculateWaterIntake();
+        });
+
+        // Fetch today's water intake records
+        await fetchTodayWaterIntakeRecords();
+      } else {
+        throw Exception("User document not found");
       }
+    } catch (e) {
+      print("Error fetching user data: $e");
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  /// Calculate daily water intake based on user details
+  double calculateWaterIntake() {
+    const double waterIntakePerKg = 32.5;
+
+    // Adjust based on age
+    double ageFactor = 1.0;
+    if (age < 18) {
+      ageFactor = 1.05;
+    } else if (age >= 50) {
+      ageFactor = 0.95;
+    }
+
+    // Adjust based on gender
+    double genderFactor = gender.toLowerCase() == 'male' ? 1.05 : 0.95;
+
+    // Final calculation
+    return weight * waterIntakePerKg * ageFactor * genderFactor;
+  }
+
+  /// Fetch water intake records for today
+  Future<void> fetchTodayWaterIntakeRecords() async {
+    try {
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      DateTime today = DateTime.now();
+      DateTime startOfDay = DateTime(today.year, today.month, today.day);
+
+      QuerySnapshot recordsSnapshot = await FirebaseFirestore.instance
+          .collection('water_intake')
+          .where('userId', isEqualTo: currentUser.uid)
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      setState(() {
+        records.clear();
+        records.addAll(recordsSnapshot.docs.map((doc) => WaterRecord(
+          time: _formatTimestamp(doc['timestamp'] as Timestamp),
+          amount: doc['amount'] as int,
+        )));
+
+        // Update current intake from records
+        currentIntake = records.fold(0, (sum, record) => sum + record.amount);
+      });
+    } catch (e) {
+      print("Error fetching water intake records: $e");
+    }
+  }
+
+  /// Add water intake record
+  Future<void> addWaterIntake() async {
+    try {
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      if (currentIntake < dailyTarget) {
+        const intakeAmount = 125;
+
+        // Add new record to Firestore
+        await FirebaseFirestore.instance.collection('water_intake').add({
+          'userId': currentUser.uid,
+          'amount': intakeAmount,
+          'timestamp': Timestamp.now(),
+        });
+
+        // Fetch updated records
+        await fetchTodayWaterIntakeRecords();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You have already reached your daily target!")),
+        );
+      }
+    } catch (e) {
+      print("Error adding water intake: $e");
+    }
+  }
+
+  /// Format Firestore timestamp to a readable time
+  String _formatTimestamp(Timestamp timestamp) {
+    DateTime dateTime = timestamp.toDate();
+    return "${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}";
+  }
+
+  /// Handle bottom navigation bar tap
+  void onTabTapped(int index) {
+    setState(() {
+      currentIndex = index;
     });
+
+    // Navigate to other pages based on index
+    switch (index) {
+      case 0:
+      // Stay on the dashboard
+        break;
+      case 1:
+      // Navigate to analysis page (implement separately)
+        break;
+      case 2:
+      // Navigate to notifications page
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) =>  NotificationScreen()),
+        );
+        break;
+      case 3:
+      // Navigate to settings page (implement separately)
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return Scaffold(
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: const Color(0xFF2196F3),
         elevation: 0,
-        title: const Row(
-          children: [
-            Text(
-              'Home',
-              style: TextStyle(color: Colors.white),
-            ),
-            Spacer(),
-            Icon(Icons.history, color: Colors.white60),
-            SizedBox(width: 20),
-            Icon(Icons.settings, color: Colors.white60),
-          ],
+        title: const Text(
+          'Dashboard',
+          style: TextStyle(color: Colors.white),
         ),
       ),
       body: Column(
         children: [
-          Container(
+          Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // Mascot and message
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[100],
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: const Icon(
-                        Icons.water_drop,
-                        color: Colors.blue,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: const Text(
-                          'Drink your glass of water slowly with some small sips',
-                          style: TextStyle(color: Colors.black87),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 30),
-                // Progress circle
                 Stack(
                   alignment: Alignment.center,
                   children: [
@@ -95,7 +209,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       width: 200,
                       height: 200,
                       child: CircularProgressIndicator(
-                        value: currentIntake / dailyTarget,
+                        value: (currentIntake / dailyTarget).clamp(0, 1),
                         strokeWidth: 10,
                         backgroundColor: Colors.grey[200],
                         color: Colors.blue,
@@ -104,7 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Column(
                       children: [
                         Text(
-                          '${currentIntake.toInt()}/${dailyTarget.toInt()}ml',
+                          '${currentIntake.toInt()}/${dailyTarget.toInt()} ml',
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -112,17 +226,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const Text(
                           'Daily Drink Target',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
                         ),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                // Add water button
                 GestureDetector(
                   onTap: addWaterIntake,
                   child: Container(
@@ -137,71 +247,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Icon(Icons.local_drink, color: Colors.blue[300]),
                         const SizedBox(width: 5),
                         Text(
-                          '125 ml',
+                          'Add 125 ml',
                           style: TextStyle(color: Colors.blue[300]),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Confirm that you have just drunk water',
-                  style: TextStyle(color: Colors.grey),
-                ),
               ],
             ),
           ),
-          // Records section
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Today's records",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // Next time
-                Row(
-                  children: [
-                    const Icon(Icons.access_time, color: Colors.grey),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          nextTime,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const Text('Next time', style: TextStyle(color: Colors.grey)),
-                      ],
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Today's Records",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
-                    const Spacer(),
-                    Text('125 ml', style: TextStyle(color: Colors.grey[600])),
-                  ],
-                ),
-                const Divider(),
-                // Records list
-                ...records.map((record) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.local_drink, color: Colors.blue),
-                      const SizedBox(width: 10),
-                      Text(record.time),
-                      const Spacer(),
-                      Text('${record.amount} ml'),
-                    ],
                   ),
-                )).toList(),
-              ],
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: records.length,
+                      itemBuilder: (context, index) {
+                        final record = records[index];
+                        return ListTile(
+                          leading: const Icon(Icons.local_drink, color: Colors.blue),
+                          title: Text(record.time),
+                          trailing: Text('${record.amount} ml'),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: onTabTapped,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'Analysis'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );
